@@ -1,13 +1,14 @@
 {
   "name": "mission-wassertropfen-prototyp",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
   },
   "scripts": {
     "dev": "vite",
+    "test:camera": "node scripts/check-camera-direction.mjs",
     "build": "vite build",
     "preview": "vite preview"
   },
