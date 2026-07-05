@@ -65,6 +65,9 @@
         <span class="controls__divider"></span>
         <button class="icon-button" id="soundButton" type="button" aria-label="Ton an oder aus" title="Ton an oder aus">♫</button>
         <button class="icon-button" id="subtitleButton" type="button" aria-label="Untertitel an oder aus" title="Untertitel an oder aus">CC</button>
+        <button class="icon-button info-control" id="chaptersButton" type="button" aria-label="Kapitelübersicht öffnen" title="Kapitelübersicht">☰</button>
+        <button class="icon-button info-control" id="transcriptButton" type="button" aria-label="Gesamten Text anzeigen" title="Gesamten Text anzeigen">Text</button>
+        <button class="icon-button info-control" id="glossaryButton" type="button" aria-label="Glossar öffnen" title="Glossar">ABC</button>
         <button class="icon-button" id="fullscreenButton" type="button" aria-label="Vollbild" title="Vollbild">⛶</button>
         <label class="quality-select">
           <span>QUALITÄT</span>
@@ -78,6 +81,25 @@
 
       <div class="look-hint" id="lookHint">Mit Finger oder Maus leicht umsehen</div>
 
+      <div class="notice-banner" id="noticeBanner" role="status" hidden>
+        <span id="noticeText"></span>
+        <button id="noticeCloseButton" type="button" aria-label="Hinweis schließen">×</button>
+      </div>
+
+      <section class="modal-layer" id="modalLayer" hidden>
+        <div class="modal-backdrop" id="modalBackdrop"></div>
+        <article class="learning-modal" id="learningModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1">
+          <header class="learning-modal__header">
+            <div>
+              <p id="modalEyebrow">MISSIONSDATEN</p>
+              <h2 id="modalTitle">Übersicht</h2>
+            </div>
+            <button class="modal-close" id="modalCloseButton" type="button" aria-label="Fenster schließen">×</button>
+          </header>
+          <div class="learning-modal__content" id="modalContent"></div>
+        </article>
+      </section>
+
       <section class="start-screen" id="startScreen">
         <div class="start-screen__grid"></div>
         <div class="start-screen__content">
@@ -90,7 +112,7 @@
           <div class="start-screen__facts">
             <span>Geführte Reise</span>
             <span>Keine Aufgaben</span>
-            <span>Etwa 5 Minuten</span>
+            <span>Etwa 3 Minuten</span>
           </div>
           <button id="startButton" class="start-button" type="button">
             <span>Mission starten</span>
@@ -106,9 +128,15 @@
         <div class="loading-bar"><span id="loadingBar"></span></div>
       </section>
 
-      <section class="error-screen" id="errorScreen" hidden>
-        <h2>Die 3D-Darstellung konnte nicht gestartet werden.</h2>
-        <p>Bitte öffne die Seite in einem aktuellen Browser oder nutze ein anderes Gerät.</p>
+      <section class="error-screen" id="errorScreen" hidden role="alertdialog" aria-modal="true" aria-labelledby="errorTitle">
+        <div class="error-screen__card">
+          <div class="error-screen__symbol" aria-hidden="true">!</div>
+          <h2 id="errorTitle">Die 3D-Darstellung konnte nicht gestartet werden.</h2>
+          <p id="errorText">Bitte öffne die Seite in einem aktuellen Browser oder nutze ein anderes Gerät.</p>
+          <button id="reloadButton" class="start-button error-screen__button" type="button" hidden>
+            <span>Seite neu laden</span>
+          </button>
+        </div>
       </section>
     </div>
     <script type="module" src="/src/main.js"></script>
