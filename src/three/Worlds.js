@@ -405,6 +405,24 @@ export class WorldManager {
     const counts = { low: 70, medium: 110, high: 170 };
     this.molecular.setActiveCount(counts[level] ?? counts.medium);
     const cloudVisibility = level !== 'low';
-    this.ocean.clouds.children.forEach((cloud, index) => { cloud.visible = cloudVisibility || index === 0; });
+    this.ocean.clouds.children.forEach((cloud, index) => {
+      cloud.visible = cloudVisibility || index === 0;
+    });
+
+    const shadowsEnabled = level === 'high';
+    this.ocean.ocean.receiveShadow = shadowsEnabled;
+    this.ocean.mountains.traverse((object) => {
+      if (!object.isMesh) return;
+      object.castShadow = shadowsEnabled;
+      object.receiveShadow = shadowsEnabled;
+    });
+    this.overview.land.receiveShadow = shadowsEnabled;
+    this.overview.river.castShadow = shadowsEnabled;
+    this.overview.river.receiveShadow = shadowsEnabled;
+    this.overview.mountains.traverse((object) => {
+      if (!object.isMesh) return;
+      object.castShadow = shadowsEnabled;
+      object.receiveShadow = shadowsEnabled;
+    });
   }
 }
