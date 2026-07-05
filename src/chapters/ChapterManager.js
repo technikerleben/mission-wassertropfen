@@ -2,16 +2,25 @@ import { gsap } from 'gsap';
 import { chapters } from './chapters.js';
 
 export class ChapterManager {
-  constructor({ worldManager, cameraRig, ui, narration }) {
+  constructor({ worldManager, cameraRig, ui, narration, eventBus }) {
     this.worldManager = worldManager;
     this.cameraRig = cameraRig;
     this.ui = ui;
     this.narration = narration;
+    this.eventBus = eventBus;
     this.chapters = chapters;
     this.index = 0;
     this.timeline = null;
     this.paused = false;
     this.currentCue = '';
+    this.cueIndex = 0;
+    this.resumeAfterOverlay = false;
+
+    this.eventBus.on('overlay:opened', () => this.pauseForOverlay());
+    this.eventBus.on('overlay:closed', () => this.resumeFromOverlay());
+    this.eventBus.on('subtitles:changed', (enabled) => {
+      if (enabled) this.ui.setSubtitle(this.currentCue);
+    });
   }
 
   start() {
@@ -22,6 +31,8 @@ export class ChapterManager {
     const targetIndex = Math.max(0, Math.min(index, this.chapters.length - 1));
     this.stopCurrent();
     this.index = targetIndex;
+    this.cueIndex = 0;
+    this.currentCue = '';
     const chapter = this.chapters[this.index];
     this.worldManager.activate(chapter.world);
     this.ui.setChapter(chapter, this.index, this.chapters.length);
@@ -40,13 +51,19 @@ export class ChapterManager {
     this.narration.stop();
     this.ui.setSubtitle('');
     this.ui.hideKeyword();
+    this.resumeAfterOverlay = false;
   }
 
-  next() { this.goTo(this.index + 1); }
-  previous() { this.goTo(this.index - 1); }
+  next() {
+    if (this.index < this.chapters.length - 1) this.goTo(this.index + 1);
+  }
+
+  previous() {
+    if (this.index > 0) this.goTo(this.index - 1);
+  }
 
   togglePause() {
-    if (!this.timeline) return;
+    if (!this.timeline || this.timeline.progress() >= 1) return;
     this.paused = !this.paused;
     if (this.paused) {
       this.timeline.pause();
@@ -58,9 +75,44 @@ export class ChapterManager {
     this.ui.setPaused(this.paused);
   }
 
+  pauseForSystemEvent() {
+    if (!this.timeline || this.paused || this.timeline.progress() >= 1) return;
+    this.paused = true;
+    this.timeline.pause();
+    this.narration.pause();
+    this.ui.setPaused(true);
+  }
+
+  pauseForOverlay() {
+    this.resumeAfterOverlay = Boolean(
+      this.timeline && !this.paused && this.timeline.progress() < 1
+    );
+    if (this.resumeAfterOverlay) {
+      this.paused = true;
+      this.timeline.pause();
+      this.narration.pause();
+      this.ui.setPaused(true);
+    }
+  }
+
+  resumeFromOverlay() {
+    if (!this.resumeAfterOverlay || !this.timeline || this.timeline.progress() >= 1) {
+      this.resumeAfterOverlay = false;
+      return;
+    }
+    this.resumeAfterOverlay = false;
+    this.paused = false;
+    this.timeline.resume();
+    this.narration.resume();
+    this.ui.setPaused(false);
+  }
+
   buildTimeline(chapter) {
     const world = this.worldManager;
-    this.timeline = gsap.timeline({ paused: true });
+    this.timeline = gsap.timeline({
+      paused: true,
+      onComplete: () => this.handleChapterComplete()
+    });
 
     if (chapter.id === 'departure') {
       this.cameraRig.setPosition(0, 5.8, 18);
@@ -115,18 +167,37 @@ export class ChapterManager {
 
     if (chapter.keyword) {
       this.timeline.call(() => this.ui.showKeyword(chapter.keyword), [], chapter.keyword.at);
-      this.timeline.call(() => this.ui.hideKeyword(), [], Math.min(chapter.duration - 2, chapter.keyword.at + 9));
+      this.timeline.call(
+        () => this.ui.hideKeyword(),
+        [],
+        Math.min(chapter.duration - 2, chapter.keyword.at + 9)
+      );
     }
 
     this.timeline.to({}, { duration: chapter.duration }, 0);
+  }
+
+  handleChapterComplete() {
+    this.ui.setSubtitle('');
+    if (this.index === this.chapters.length - 1) {
+      window.setTimeout(() => this.ui.showCompletion(), 450);
+    }
   }
 
   update() {
     if (!this.timeline) return;
     const chapter = this.chapters[this.index];
     const time = this.timeline.time();
-    const cue = chapter.cues.find(([start, end]) => time >= start && time < end);
-    const text = cue?.[2] ?? '';
+
+    while (
+      this.cueIndex < chapter.cues.length - 1
+      && time >= chapter.cues[this.cueIndex][1]
+    ) {
+      this.cueIndex += 1;
+    }
+
+    const cue = chapter.cues[this.cueIndex];
+    const text = cue && time >= cue[0] && time < cue[1] ? cue[2] : '';
     if (text !== this.currentCue) {
       this.currentCue = text;
       this.ui.setSubtitle(text);
