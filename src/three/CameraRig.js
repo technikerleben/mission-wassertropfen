@@ -9,7 +9,8 @@ export class CameraRig {
     this.root.add(this.lookPivot);
     this.lookPivot.add(camera);
     this.target = new THREE.Vector3(0, 0, -1);
-    this.helper = new THREE.Object3D();
+    this.viewMatrix = new THREE.Matrix4();
+    this.desiredQuaternion = new THREE.Quaternion();
     this.pointer = { active: false, startX: 0, startY: 0, startYaw: 0, startPitch: 0 };
     this.userYaw = 0;
     this.userPitch = 0;
@@ -47,6 +48,25 @@ export class CameraRig {
 
   setTarget(x, y, z) {
     this.target.set(x, y, z);
+    this.snapToTarget();
+  }
+
+  calculateDesiredQuaternion() {
+    if (this.root.position.distanceToSquared(this.target) < 0.000001) return false;
+
+    // Kameras blicken in Three.js entlang ihrer lokalen negativen Z-Achse.
+    // Matrix4.lookAt(eye, target, up) erzeugt genau diese Kameraorientierung.
+    // Object3D.lookAt() auf einer normalen Group würde dagegen die positive
+    // Z-Achse zum Ziel drehen und die Kamera dadurch vom Motiv wegschauen lassen.
+    this.viewMatrix.lookAt(this.root.position, this.target, this.root.up);
+    this.desiredQuaternion.setFromRotationMatrix(this.viewMatrix);
+    return true;
+  }
+
+  snapToTarget() {
+    if (this.calculateDesiredQuaternion()) {
+      this.root.quaternion.copy(this.desiredQuaternion);
+    }
   }
 
   resetLook() {
@@ -55,10 +75,10 @@ export class CameraRig {
   }
 
   update(deltaTime) {
-    this.helper.position.copy(this.root.position);
-    this.helper.lookAt(this.target);
     const blend = 1 - Math.exp(-deltaTime * 8);
-    this.root.quaternion.slerp(this.helper.quaternion, blend);
+    if (this.calculateDesiredQuaternion()) {
+      this.root.quaternion.slerp(this.desiredQuaternion, blend);
+    }
     this.userYaw = THREE.MathUtils.lerp(this.userYaw, this.targetYaw, blend);
     this.userPitch = THREE.MathUtils.lerp(this.userPitch, this.targetPitch, blend);
     this.lookPivot.rotation.set(this.userPitch, this.userYaw, 0, 'YXZ');
