@@ -24,5 +24,8 @@ jobs:
       - name: Abhängigkeiten installieren
         run: npm ci
 
+      - name: Kamerarichtung prüfen
+        run: npm run test:camera
+
       - name: Produktions-Build prüfen
         run: npm run build
