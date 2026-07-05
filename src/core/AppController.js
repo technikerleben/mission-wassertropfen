@@ -16,6 +16,7 @@ export class AppController {
     this.elapsed = 0;
     this.started = false;
     this.quality = 'medium';
+    this.contextLost = false;
   }
 
   async init() {
@@ -24,12 +25,17 @@ export class AppController {
       this.scene = new THREE.Scene();
       this.scene.fog = new THREE.FogExp2('#0a3043', .005);
       this.camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, .05, 350);
-      this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: 'high-performance' });
+      this.renderer = new THREE.WebGLRenderer({
+        canvas: this.canvas,
+        antialias: true,
+        powerPreference: 'high-performance'
+      });
       this.renderer.outputColorSpace = THREE.SRGBColorSpace;
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
       this.renderer.toneMappingExposure = 1.15;
-      this.renderer.shadowMap.enabled = false;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.bindWebGLContextEvents();
       this.ui.setLoading(.38);
 
       this.cameraRig = new CameraRig(this.camera, this.canvas);
@@ -41,8 +47,11 @@ export class AppController {
         worldManager: this.worldManager,
         cameraRig: this.cameraRig,
         ui: this.ui,
-        narration: this.narration
+        narration: this.narration,
+        eventBus: this.eventBus
       });
+      this.ui.setChapterList(this.chapterManager.chapters);
+      this.ui.setLearningContent(this.chapterManager.chapters);
       this.bindEvents();
       this.applyQuality('medium');
       this.worldManager.activate('ocean');
@@ -53,24 +62,56 @@ export class AppController {
       this.animate();
     } catch (error) {
       console.error(error);
-      this.ui.showError();
+      this.ui.showRuntimeError({
+        title: 'Die 3D-Darstellung konnte nicht gestartet werden.',
+        text: 'Bitte öffne die Seite in einem aktuellen Browser oder nutze ein anderes Gerät.',
+        reload: false
+      });
     }
   }
 
   addLights() {
-    const hemisphere = new THREE.HemisphereLight('#c7f6ff', '#163445', 2.5);
-    const sunLight = new THREE.DirectionalLight('#fff2cf', 3.4);
-    sunLight.position.set(-24, 36, 16);
-    const fill = new THREE.DirectionalLight('#52cce3', 1.1);
-    fill.position.set(18, 8, 20);
-    this.scene.add(hemisphere, sunLight, fill);
+    this.hemisphereLight = new THREE.HemisphereLight('#c7f6ff', '#163445', 2.5);
+    this.sunLight = new THREE.DirectionalLight('#fff2cf', 3.4);
+    this.sunLight.position.set(-24, 36, 16);
+    this.sunLight.shadow.mapSize.set(1024, 1024);
+    this.sunLight.shadow.camera.near = 1;
+    this.sunLight.shadow.camera.far = 160;
+    this.sunLight.shadow.camera.left = -55;
+    this.sunLight.shadow.camera.right = 55;
+    this.sunLight.shadow.camera.top = 55;
+    this.sunLight.shadow.camera.bottom = -55;
+    this.fillLight = new THREE.DirectionalLight('#52cce3', 1.1);
+    this.fillLight.position.set(18, 8, 20);
+    this.scene.add(this.hemisphereLight, this.sunLight, this.fillLight);
+  }
+
+  bindWebGLContextEvents() {
+    this.canvas.addEventListener('webglcontextlost', (event) => {
+      event.preventDefault();
+      this.contextLost = true;
+      this.narration.stop();
+      this.chapterManager?.pauseForSystemEvent();
+      this.ui.showRuntimeError({
+        title: 'Die 3D-Verbindung wurde unterbrochen.',
+        text: 'Das kann auf schwächeren Geräten oder nach einem längeren Tab-Wechsel passieren. Lade die Seite neu, um die Mission fortzusetzen.',
+        reload: true
+      });
+    });
+
+    this.canvas.addEventListener('webglcontextrestored', () => {
+      this.contextLost = false;
+      this.ui.updateRuntimeError('Die Grafikverbindung ist wieder verfügbar. Ein Neuladen stellt alle Szenen sicher wieder her.');
+    });
   }
 
   bindEvents() {
-    this.eventBus.on('mission:start', () => {
+    this.eventBus.on('mission:start', async () => {
       if (this.started) return;
       this.started = true;
-      this.narration.unlock();
+      this.ui.setStartPending(true);
+      const speechStatus = await this.narration.unlock();
+      this.ui.setSpeechStatus(speechStatus);
       this.ui.leaveStartScreen();
       this.chapterManager.start();
     });
@@ -80,6 +121,9 @@ export class AppController {
     this.eventBus.on('chapter:previous', () => {
       if (this.started) this.chapterManager.previous();
     });
+    this.eventBus.on('chapter:select', (index) => {
+      if (this.started) this.chapterManager.goTo(index);
+    });
     this.eventBus.on('playback:toggle', () => {
       if (this.started) this.chapterManager.togglePause();
     });
@@ -87,26 +131,43 @@ export class AppController {
     this.eventBus.on('quality:changed', (level) => this.applyQuality(level));
     window.addEventListener('resize', () => this.resize());
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden && this.started && !this.chapterManager.paused) this.chapterManager.togglePause();
+      if (document.hidden && this.started && !this.chapterManager.paused) {
+        this.chapterManager.pauseForSystemEvent();
+      }
     });
+  }
+
+  getMaxPixelRatio() {
+    const pixelRatios = { low: 1, medium: 1.25, high: 1.75 };
+    return pixelRatios[this.quality] ?? pixelRatios.medium;
+  }
+
+  updatePixelRatio() {
+    if (!this.renderer) return;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.getMaxPixelRatio()));
   }
 
   applyQuality(level) {
     this.quality = level;
-    const pixelRatios = { low: 1, medium: 1.25, high: 1.75 };
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatios[level] ?? 1.25));
+    this.updatePixelRatio();
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
+
+    const shadowsEnabled = level === 'high';
+    this.renderer.shadowMap.enabled = shadowsEnabled;
+    this.sunLight.castShadow = shadowsEnabled;
     this.worldManager.setQuality(level);
   }
 
   resize() {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
+    this.updatePixelRatio();
     this.renderer.setSize(window.innerWidth, window.innerHeight, false);
   }
 
   animate() {
     this.renderer.setAnimationLoop(() => {
+      if (this.contextLost) return;
       const deltaTime = Math.min(this.clock.getDelta(), .05);
       this.elapsed += deltaTime;
       this.cameraRig.update(deltaTime);
