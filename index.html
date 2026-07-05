@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#071826" />
+    <meta name="description" content="Geführte 3D-Reise durch den Wasserkreislauf für Schülerinnen und Schüler." />
+    <title>Mission Wassertropfen</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="experience" aria-label="Dreidimensionale Darstellung des Wasserkreislaufs"></canvas>
+
+      <div class="vignette" aria-hidden="true"></div>
+      <div class="cockpit" aria-hidden="true">
+        <div class="cockpit__top"></div>
+        <div class="cockpit__left"></div>
+        <div class="cockpit__right"></div>
+        <div class="cockpit__bottom">
+          <div class="cockpit__lights"><span></span><span></span><span></span></div>
+          <div class="cockpit__grille"></div>
+          <div class="cockpit__lights cockpit__lights--right"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+
+      <header class="hud hud--top">
+        <div class="mission-mark">
+          <span class="mission-mark__dot"></span>
+          <div>
+            <strong>MISSION WASSERTROPFEN</strong>
+            <small>AQUA EXPLORER · FORSCHUNGSDECK</small>
+          </div>
+        </div>
+        <div class="chapter-counter" id="chapterCounter">01 / 04</div>
+      </header>
+
+      <aside class="telemetry" aria-label="Messwerte">
+        <div><span>ORT</span><strong id="placeValue">MEER</strong></div>
+        <div><span>VORGANG</span><strong id="processValue">BEREITSCHAFT</strong></div>
+        <div><span>ZUSTAND</span><strong id="stateValue">FLÜSSIG</strong></div>
+        <div><span>ENERGIE</span><strong id="energyValue">NORMAL</strong></div>
+      </aside>
+
+      <section class="chapter-card" id="chapterCard" aria-live="polite">
+        <p class="chapter-card__eyebrow" id="chapterEyebrow">KAPITEL 1</p>
+        <h1 id="chapterTitle">Willkommen an Bord</h1>
+        <p id="chapterIntro">Eine Forschungsreise beginnt.</p>
+      </section>
+
+      <section class="keyword" id="keyword" aria-live="polite" hidden>
+        <span>FACHBEGRIFF</span>
+        <strong id="keywordTitle"></strong>
+        <p id="keywordText"></p>
+      </section>
+
+      <div class="subtitle" id="subtitle" aria-live="polite"></div>
+
+      <nav class="controls" aria-label="Steuerung der Lernreise">
+        <button class="icon-button" id="backButton" type="button" aria-label="Vorheriges Kapitel" title="Vorheriges Kapitel">←</button>
+        <button class="main-button" id="playButton" type="button" aria-label="Pause oder Fortsetzen">
+          <span id="playIcon">Ⅱ</span>
+          <span id="playLabel">Pause</span>
+        </button>
+        <button class="icon-button" id="nextButton" type="button" aria-label="Nächstes Kapitel" title="Nächstes Kapitel">→</button>
+        <span class="controls__divider"></span>
+        <button class="icon-button" id="soundButton" type="button" aria-label="Ton an oder aus" title="Ton an oder aus">♫</button>
+        <button class="icon-button" id="subtitleButton" type="button" aria-label="Untertitel an oder aus" title="Untertitel an oder aus">CC</button>
+        <button class="icon-button" id="fullscreenButton" type="button" aria-label="Vollbild" title="Vollbild">⛶</button>
+        <label class="quality-select">
+          <span>QUALITÄT</span>
+          <select id="qualitySelect" aria-label="Grafikqualität">
+            <option value="low">Niedrig</option>
+            <option value="medium" selected>Mittel</option>
+            <option value="high">Hoch</option>
+          </select>
+        </label>
+      </nav>
+
+      <div class="look-hint" id="lookHint">Mit Finger oder Maus leicht umsehen</div>
+
+      <section class="start-screen" id="startScreen">
+        <div class="start-screen__grid"></div>
+        <div class="start-screen__content">
+          <div class="start-screen__badge">3D-FORSCHUNGSMISSION</div>
+          <h1>Mission<br /><em>Wassertropfen</em></h1>
+          <p>
+            Steig in die <strong>Aqua Explorer</strong>, schrumpfe auf Molekülgröße
+            und begleite Wasser auf seiner Reise durch Verdunstung, Wolken und Regen.
+          </p>
+          <div class="start-screen__facts">
+            <span>Geführte Reise</span>
+            <span>Keine Aufgaben</span>
+            <span>Etwa 5 Minuten</span>
+          </div>
+          <button id="startButton" class="start-button" type="button">
+            <span>Mission starten</span>
+            <small>Ton und 3D-Erfahrung aktivieren</small>
+          </button>
+          <p class="start-screen__note">Für die beste Wirkung im Vollbild betrachten.</p>
+        </div>
+      </section>
+
+      <section class="loading-screen" id="loadingScreen">
+        <div class="loading-screen__orb"></div>
+        <strong>Forschungssysteme werden gestartet</strong>
+        <div class="loading-bar"><span id="loadingBar"></span></div>
+      </section>
+
+      <section class="error-screen" id="errorScreen" hidden>
+        <h2>Die 3D-Darstellung konnte nicht gestartet werden.</h2>
+        <p>Bitte öffne die Seite in einem aktuellen Browser oder nutze ein anderes Gerät.</p>
+      </section>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
